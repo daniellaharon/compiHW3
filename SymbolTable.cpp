@@ -16,7 +16,7 @@ static vector<string> make_reversed_vector(vector<string> v)
     return reverse_vector;
 }
 
-void open_block(bool is_from_while_opened, string ret_type)
+void OpenNewBlock(bool is_from_while_opened, string ret_type)
 {
     symbol_table_block curr_block;
     if (is_from_while_opened ) {
@@ -45,7 +45,7 @@ void open_block(bool is_from_while_opened, string ret_type)
     }
 }
 
-void close_block()
+void CloseBlock()
 {
     offset_stack.pop();
     output::endScope();
@@ -68,7 +68,7 @@ void insert_var_to_sym_table(std::shared_ptr<TypeVar> type, std::shared_ptr<Type
 		exit(1);
 	}
 
-    symbol_table_block_entry curr_entry((offset_stack.top())++, false, id->id, type->type,is_func);
+    symTableBlockEntry curr_entry((offset_stack.top())++, false, id->id, type->type,is_func);
     symbol_table_block_stack.back().entries.push_back(curr_entry);
 }
 
@@ -77,7 +77,7 @@ void insert_func_to_sym_table(string type, string id, std::vector<string> name_v
     if (id == "main" && type == "VOID" && type_vector.empty()){
         main_exist = true;
     }
-    symbol_table_block_entry curr_entry((int)0, true, id, type, true, name_vector, type_vector);
+    symTableBlockEntry curr_entry((int)0, true, id, type, true, name_vector, type_vector);
     symbol_table_block_stack.back().entries.push_back(curr_entry);
     curr_entry.is_func = true;
 }
@@ -93,7 +93,7 @@ void insert_func_params_to_sym_table(std::vector<string> name_vector, std::vecto
         }
         counter--;
         func_params.insert(name_vector[i]);
-        symbol_table_block_entry var_entry(counter, false, name_vector[i], type_vector[i], false);
+        symTableBlockEntry var_entry(counter, false, name_vector[i], type_vector[i], false);
         symbol_table_block_stack.back().entries.push_back(var_entry);
     }
 }
@@ -139,7 +139,7 @@ void is_valid_ret_type(std::shared_ptr<TypeVar> var, int lineno)
     string type = var->type;
     if (!var->id.empty()){
         bool found = false;
-        symbol_table_block_entry found_entry;
+        symTableBlockEntry found_entry;
         for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
             for (auto entry : block->entries){
                 if (entry.id == var->id){
@@ -173,7 +173,7 @@ void check_valid_auto_assign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeV
 void check_valid_var_assign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno)
 {
     bool found = false;
-    symbol_table_block_entry found_entry;
+    symTableBlockEntry found_entry;
     for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
         for (auto entry : block->entries){
             if (entry.id == var->id){
@@ -200,9 +200,9 @@ void check_valid_var_assign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVa
 
 }
 
-void call_function(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list_var, std::shared_ptr<TypeVar> call_var, int lineno)
+void CallFunc(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list_var, std::shared_ptr<TypeVar> call_var, int lineno)
 {
-    symbol_table_block_entry found_entry;
+    symTableBlockEntry found_entry;
     auto main_block = symbol_table_block_stack.front();
     bool found = false;
     for (auto entry : main_block.entries){
@@ -226,7 +226,7 @@ void call_function(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp
             continue;
         }
         bool found = false;
-        symbol_table_block_entry found_entry;
+        symTableBlockEntry found_entry;
         for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
             for (auto entry : block->entries){
                 if (entry.id == exp_list_var->name_list[i]){
@@ -266,7 +266,7 @@ void call_function(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp
 
 void main_scope_initialization()
 {
-    open_block(false, "");
+    OpenNewBlock(false, "");
     insert_func_to_sym_table("VOID", "print", {"input"}, {"STRING"});
     insert_func_to_sym_table("VOID", "printi", {"input"}, {"INT"});
 }
@@ -274,7 +274,7 @@ void main_scope_initialization()
 void close_main_scope()
 {
     if (main_exist){
-        close_block();
+        CloseBlock();
         return;
     }
     
@@ -282,20 +282,20 @@ void close_main_scope()
     exit(1);
 }
 
-void inc_while()
+void WhileState(bool curr_while_state)
 {
-    while_scope+=1;
+    if(curr_while_state){
+        while_scope+=1;
+    }
+    else{
+        while_scope-=1;
+    }
 }
 
-void dec_while()
-{
-    while_scope-=1;
-}
-
-void assign_var_type(std::shared_ptr<TypeVar> var, int lineno)
+void VarExistsInScope(std::shared_ptr<TypeVar> var, int lineno)
 {
     bool found = false;
-    symbol_table_block_entry found_entry;
+    symTableBlockEntry found_entry;
     for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
         for (auto entry : block->entries){
             if (entry.id == var->id && !entry.is_func){
