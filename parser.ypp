@@ -1,0 +1,153 @@
+%{
+    #include <iostream>
+    #include "hw3_output.hpp"
+    #include "sym_table.hpp"
+    using namespace output;
+    int main();
+    void yyerror(const char*);
+    extern int yylineno;
+    extern int yylex();
+%}
+
+%token VOID INT BYTE B BOOL AUTO TRUE FALSE RETURN WHILE BREAK CONTINUE SC COMMA LPAREN LBRACE RBRACE ID NUM STRING IF
+
+%right ASSIGN
+%left OR
+%left AND
+%left EQUALOP
+%nonassoc RELOP
+%left ADDOP
+%left MULTOP
+%right NOT
+%left RPAREN
+%nonassoc ELSE
+
+%%
+
+Prog:               Funcs               {}
+;
+
+Funcs:              /* epsilon */       {}
+                    | FuncDecl Funcs    {}
+;
+
+FuncDecl:           RetType ID LPAREN Formals RPAREN
+                    {check_id_exsist_in_curr_scope($2, yylineno);
+                    insert_func_to_sym_table($1->type, $2->id, $4->name_list, $4->type_list);
+                    open_block(false, $1->type);
+                    insert_func_params_to_sym_table($4->name_list, $4->type_list, yylineno);}
+                    LBRACE Statements RBRACE {close_block();}
+;
+
+RetType:            Type                {$$ = $1;}
+                    |  VOID             {$$ = std::make_shared<Var>(); $$->type = "VOID";}
+;
+
+Formals:            /* epsilon */       {$$ = std::make_shared<Var>();}
+                    | FormalsList       {$$ = $1;}
+;
+
+FormalsList:        FormalDecl          {$$ = std::make_shared<Var>();
+                                         $$->name_list = insert_to_vars_list($$->name_list, $1->id);
+                                         $$->type_list = insert_to_vars_list($$->type_list, $1->type);}
+                    | FormalDecl COMMA FormalsList  {$$ = $3;
+                                                     $$->name_list = insert_to_vars_list($3->name_list, $1->id);
+                                                     $$->type_list = insert_to_vars_list($3->type_list, $1->type);}
+;
+
+FormalDecl:         Type ID          {$$ = $2; $$->type = $1->type;}
+;
+
+Statements:         Statement           {}
+                    | Statements Statement  {}
+;
+
+Statement:          LBRACE OPEN_BLOCK Statements RBRACE    {close_block();}
+                    | Type ID SC {check_id_exsist_in_curr_scope($2, yylineno);
+                                  insert_var_to_sym_table($1, $2, false,yylineno);}
+                    | Type ID ASSIGN Exp SC  {check_id_exsist_in_curr_scope($2, yylineno);
+                                              check_valid_assign($1, $4, yylineno);
+                                              insert_var_to_sym_table($1, $2, false,yylineno);}
+                    | AUTO ID ASSIGN Exp SC  {check_id_exsist_in_curr_scope($2, yylineno);
+											 check_valid_auto_assign($2, $4, yylineno);
+                                              insert_var_to_sym_table($4, $2, false,yylineno);}
+                    | ID ASSIGN Exp SC  {check_valid_var_assign($1, $3, yylineno);}
+                    | Call SC           {}
+                    | RETURN SC         {is_scope_void(yylineno);}
+                    | RETURN Exp SC     {is_valid_ret_type($2, yylineno);}
+                    | IF LPAREN check_valid_bool RPAREN OPEN_BLOCK Statement CLOSE_BLOCK {}
+                    | IF LPAREN check_valid_bool RPAREN OPEN_BLOCK Statement CLOSE_BLOCK ELSE OPEN_BLOCK Statement CLOSE_BLOCK {}
+                    | WHILE LPAREN check_valid_bool RPAREN IN_WHILE_BLOCK OPEN_BLOCK Statement CLOSE_BLOCK OUT_WHILE_BLOCK{}
+                    | BREAK SC          {is_scope_while(yylineno, true);}
+                    | CONTINUE SC       {is_scope_while(yylineno, false);}
+;
+
+OPEN_BLOCK:         /* epsilon */               {open_block(false, "");}
+;
+
+check_valid_bool:    Exp                    {check_valid_bool($1, yylineno);}
+;
+
+IN_WHILE_BLOCK:    /* epsilon */              {inc_while();}
+;
+
+OUT_WHILE_BLOCK:   /* epsilon */               {dec_while();}
+;
+
+CLOSE_BLOCK:         /* epsilon */               {close_block();}
+;
+
+Call:               ID LPAREN ExpList RPAREN    {$$ = $3;
+                                                 call_function($1, $3, $$, yylineno);
+                                                 $$->id = $1->id;}
+
+                    | ID LPAREN RPAREN          {$$ = $1;
+                                                 call_function($1,
+                                                                  std::make_shared<Var>(),
+                                                                  $$,
+                                                                  yylineno);}
+;
+
+ExpList:            Exp                         {$$ = std::make_shared<Var>();
+                                                 $$->name_list = insert_to_vars_list($$->name_list, $1->id);
+                                                 $$->type_list = insert_to_vars_list($$->type_list, $1->type);}
+                    | Exp COMMA ExpList         {$$ = $3;
+                                                 $$->name_list = insert_to_vars_list($3->name_list, $1->id);
+                                                 $$->type_list = insert_to_vars_list($3->type_list, $1->type);}
+;
+
+Type:               INT                         {$$ = std::make_shared<Var>(); $$->type = "INT";}
+                    | BYTE                      {$$ = std::make_shared<Var>(); $$->type = "BYTE";}
+                    | BOOL                      {$$ = std::make_shared<Var>(); $$->type = "BOOL";}
+;
+
+Exp:                LPAREN Exp RPAREN           {$$ = $2;}
+                    | Exp ADDOP Exp             {$$ = std::make_shared<Var>(); check_valid_num($1, yylineno); check_valid_num($3, yylineno); $$->type = get_type($1, $3);}
+                    | Exp MULTOP Exp            {$$ = std::make_shared<Var>(); check_valid_num($1, yylineno); check_valid_num($3, yylineno); $$->type = get_type($1, $3);}
+                    | ID                        {$$ = $1;
+                                                 assign_var_type($$, yylineno);}
+                    | Call                      {$$ = $1;}
+                    | NUM                       {$$ = $1; $$->type = "INT";}
+                    | NUM B                     {$$ = $1; byte_overflow($$, yylineno); $$->type = "BYTE";}
+                    | STRING                    {$$ = std::make_shared<Var>(); $$->type = "STRING";}
+                    | TRUE                      {$$ = std::make_shared<Var>(); $$->type = "BOOL";}
+                    | FALSE                     {$$ = std::make_shared<Var>(); $$->type = "BOOL";}
+                    | NOT Exp                   {$$ = $2; check_valid_bool($$, yylineno);}
+                    | Exp AND Exp               {check_valid_bool($1, yylineno); check_valid_bool($3, yylineno); $$ = $1;}
+                    | Exp OR Exp                {check_valid_bool($1, yylineno); check_valid_bool($3, yylineno); $$ = $1;}
+                    | Exp RELOP Exp             {check_valid_num($1, yylineno); check_valid_num($3, yylineno); $$ = std::make_shared<Var>(); $$->type = "BOOL";}
+                    | Exp EQUALOP Exp           {check_valid_num($1, yylineno); check_valid_num($3, yylineno); $$ = std::make_shared<Var>(); $$->type = "BOOL";}
+                    | LPAREN Type RPAREN Exp    {check_valid_cast($2, $4, yylineno); $$ = $4; $$->type = $2->type;}
+;
+
+%%
+
+void yyerror(const char*){errorSyn(yylineno); exit(1);}
+
+int main() {
+    main_scope_initialization();
+    yyparse();
+    close_main_scope();
+    return 0;
+}
+
