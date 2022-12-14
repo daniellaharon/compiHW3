@@ -37,7 +37,7 @@ std::vector<string> PushBackVar(std::vector<string> current_list, string param)
     return current_list;
 }
 
-void check_valid_assign(std::shared_ptr<TypeVar> var1, std::shared_ptr<TypeVar> var2, int lineno)
+void CheckAssign(std::shared_ptr<TypeVar> var1, std::shared_ptr<TypeVar> var2, int lineno)
 {
     if(var1->type == var2->type){
         return;

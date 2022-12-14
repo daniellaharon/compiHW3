@@ -61,7 +61,7 @@ void CloseBlock()
     symbol_table_block_stack.pop_back();
 }
 
-void insert_var_to_sym_table(std::shared_ptr<TypeVar> type, std::shared_ptr<TypeVar> id, bool is_func ,int lineno)
+void InsertToSymTable(std::shared_ptr<TypeVar> type, std::shared_ptr<TypeVar> id, bool is_func ,int lineno)
 {
 	if (type->type == "VOID" ) {
 		output::errorMismatch(lineno);
@@ -72,7 +72,7 @@ void insert_var_to_sym_table(std::shared_ptr<TypeVar> type, std::shared_ptr<Type
     symbol_table_block_stack.back().entries.push_back(curr_entry);
 }
 
-void insert_func_to_sym_table(string type, string id, std::vector<string> name_vector, std::vector<string> type_vector)
+void InsertFuncSymTab(string type, string id, std::vector<string> name_vector, std::vector<string> type_vector)
 {
     if (id == "main" && type == "VOID" && type_vector.empty()){
         main_exist = true;
@@ -82,7 +82,7 @@ void insert_func_to_sym_table(string type, string id, std::vector<string> name_v
     curr_entry.is_func = true;
 }
 
-void insert_func_params_to_sym_table(std::vector<string> name_vector, std::vector<string> type_vector, int lineno)
+void InsertParamsToSymTab(std::vector<string> name_vector, std::vector<string> type_vector, int lineno)
 {
     int counter = 0;
     std::unordered_set<string> func_params;
@@ -98,7 +98,7 @@ void insert_func_params_to_sym_table(std::vector<string> name_vector, std::vecto
     }
 }
 
-void check_id_exsist_in_curr_scope(std::shared_ptr<TypeVar> var, int lineno)
+void CheckPrevDeclID(std::shared_ptr<TypeVar> var, int lineno)
 {
     for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
         for (auto entry : block->entries){
@@ -110,7 +110,7 @@ void check_id_exsist_in_curr_scope(std::shared_ptr<TypeVar> var, int lineno)
     }
 }
 
-void is_scope_void(int lineno)
+void CheckVoidScope(int lineno)
 {
     if (symbol_table_block_stack.back().ret_type == "VOID"){
         return;
@@ -119,7 +119,7 @@ void is_scope_void(int lineno)
      exit(1);
 }
 
-void is_scope_while(int lineno, bool is_break)
+void CheckWhileScope(int lineno, bool is_break)
 {
     if (!while_scope){
         if (!is_break){
@@ -133,7 +133,7 @@ void is_scope_while(int lineno, bool is_break)
     }
 }
 
-void is_valid_ret_type(std::shared_ptr<TypeVar> var, int lineno)
+void ValidateRetType(std::shared_ptr<TypeVar> var, int lineno)
 {
 
     string type = var->type;
@@ -170,7 +170,7 @@ void check_valid_auto_assign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeV
 
 }
 
-void check_valid_var_assign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno)
+void ValidateAssign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno)
 {
     bool found = false;
     symTableBlockEntry found_entry;
@@ -267,8 +267,8 @@ void CallFunc(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list
 void main_scope_initialization()
 {
     OpenNewBlock(false, "");
-    insert_func_to_sym_table("VOID", "print", {"input"}, {"STRING"});
-    insert_func_to_sym_table("VOID", "printi", {"input"}, {"INT"});
+    InsertFuncSymTab("VOID", "print", {"input"}, {"STRING"});
+    InsertFuncSymTab("VOID", "printi", {"input"}, {"INT"});
 }
 
 void close_main_scope()

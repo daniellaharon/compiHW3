@@ -33,10 +33,10 @@ Funcs:              /* epsilon */       {}
 ;
 
 FuncDecl:           RetType ID LPAREN Formals RPAREN
-                    {check_id_exsist_in_curr_scope($2, yylineno);
-                    insert_func_to_sym_table($1->type, $2->id, $4->name_list, $4->type_list);
+                    {CheckPrevDeclID($2, yylineno);
+                    InsertFuncSymTab($1->type, $2->id, $4->name_list, $4->type_list);
                     OpenNewBlock(false, $1->type);
-                    insert_func_params_to_sym_table($4->name_list, $4->type_list, yylineno);}
+                    InsertParamsToSymTab($4->name_list, $4->type_list, yylineno);}
                     LBRACE Statements RBRACE {CloseBlock();}
 ;
 
@@ -64,20 +64,20 @@ Statements:         Statement           {}
 ;
 
 Statement:          LBRACE OPENBLOCK Statements RBRACE    {CloseBlock();}
-                    | Type ID SC {check_id_exsist_in_curr_scope($2, yylineno);
-                                  insert_var_to_sym_table($1, $2, false,yylineno);}
-                    | Type ID ASSIGN Exp SC  {check_id_exsist_in_curr_scope($2, yylineno);
-                                              check_valid_assign($1, $4, yylineno);
-                                              insert_var_to_sym_table($1, $2, false,yylineno);}
-                    | ID ASSIGN Exp SC  {check_valid_var_assign($1, $3, yylineno);}
+                    | Type ID SC {CheckPrevDeclID($2, yylineno);
+                                  InsertToSymTable($1, $2, false,yylineno);}
+                    | Type ID ASSIGN Exp SC  {CheckPrevDeclID($2, yylineno);
+                                              CheckAssign($1, $4, yylineno);
+                                              InsertToSymTable($1, $2, false,yylineno);}
+                    | ID ASSIGN Exp SC  {ValidateAssign($1, $3, yylineno);}
                     | Call SC           {}
-                    | RETURN SC         {is_scope_void(yylineno);}
-                    | RETURN Exp SC     {is_valid_ret_type($2, yylineno);}
+                    | RETURN SC         {CheckVoidScope(yylineno);}
+                    | RETURN Exp SC     {ValidateRetType($2, yylineno);}
                     | IF LPAREN CHECKBOOLVALID RPAREN OPENBLOCK Statement CLOSEBLOCK {}
                     | IF LPAREN CHECKBOOLVALID RPAREN OPENBLOCK Statement CLOSEBLOCK ELSE OPENBLOCK Statement CLOSEBLOCK {}
                     | WHILE LPAREN CHECKBOOLVALID RPAREN WHILEBLOCK OPENBLOCK Statement CLOSEBLOCK WHILEBLOCKCLOSED{}
-                    | BREAK SC          {is_scope_while(yylineno, true);}
-                    | CONTINUE SC       {is_scope_while(yylineno, false);}
+                    | BREAK SC          {CheckWhileScope(yylineno, true);}
+                    | CONTINUE SC       {CheckWhileScope(yylineno, false);}
 ;
 
 OPENBLOCK:         /* epsilon */                {OpenNewBlock(false, "");}
