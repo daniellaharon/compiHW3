@@ -1,33 +1,37 @@
 #include "SymbolTable.h"
 #include <iostream>
 #include <unordered_set>
-#include <algorithm>
+
 std::vector<symbol_table_block> symbol_table_block_stack;
 std::stack<int> offset_stack;
 bool main_exist = false;
 int while_scope = 0;
 
-static vector<string> make_reversed_vector(vector<string> v)
+static vector<string> ReverseVec(vector<string> vec)
 {
-    vector<string> reverse_vector;
-    for (int i = v.size() - 1; i >= 0; i--){
-        reverse_vector.push_back(v[i]);
+    vector<string> reverse_vec;
+    for (int i = vec.size() - 1; i >= 0; i--)
+    {
+        reverse_vec.push_back(vec[i]);
     }
-    return reverse_vector;
+    return reverse_vec;
 }
 
-void OpenNewBlock(bool is_from_while_opened, string ret_type)
+void OpenNewBlock(bool is_while_block, string ret_type)
 {
     symbol_table_block curr_block;
-    if (is_from_while_opened ) {
+    if (is_while_block )
+    {
         curr_block.is_while = true;
-    } else if (!symbol_table_block_stack.empty() && symbol_table_block_stack.back().is_while){
+    } else if (!symbol_table_block_stack.empty() && symbol_table_block_stack.back().is_while)
+    {
         curr_block.is_while = true;
     } else {
         curr_block.is_while = false;
     }
 
-    if (!ret_type.empty() ) {
+    if (!ret_type.empty() )
+    {
         curr_block.ret_type = !ret_type.empty() ? ret_type : symbol_table_block_stack.back().ret_type;
     } else if (!symbol_table_block_stack.empty() && !symbol_table_block_stack.back().ret_type.empty()){
         curr_block.ret_type = !ret_type.empty() ? ret_type : symbol_table_block_stack.back().ret_type;
@@ -37,7 +41,8 @@ void OpenNewBlock(bool is_from_while_opened, string ret_type)
 
     symbol_table_block_stack.push_back(curr_block);
 
-    if (offset_stack.empty()){
+    if (offset_stack.empty())
+    {
         offset_stack.push(0);
     }
     else{
@@ -49,11 +54,13 @@ void CloseBlock()
 {
     offset_stack.pop();
     output::endScope();
-    for (auto entry : symbol_table_block_stack.back().entries){
+    for (auto entry : symbol_table_block_stack.back().entries)
+    {
         string type = entry.type;
-        if (entry.is_func){
-            vector<string> reversed_vector = make_reversed_vector(entry.type_list);
-            type = output::makeFunctionType(entry.type, reversed_vector);
+        if (entry.is_func)
+        {
+            vector<string> reversed_vec = ReverseVec(entry.type_list);
+            type = output::makeFunctionType(entry.type, reversed_vec);
         }
         int offset_to_print = entry.is_offset_null ? 0 : entry.offset;
         output::printID(entry.id, offset_to_print, type);
@@ -68,40 +75,45 @@ void InsertToSymTable(std::shared_ptr<TypeVar> type, std::shared_ptr<TypeVar> id
 		exit(1);
 	}
 
-    symTableBlockEntry curr_entry((offset_stack.top())++, false, id->id, type->type,is_func);
-    symbol_table_block_stack.back().entries.push_back(curr_entry);
+    symTableBlockEntry entry((offset_stack.top())++, false, id->id, type->type,is_func);
+    symbol_table_block_stack.back().entries.push_back(entry);
 }
 
 void InsertFuncSymTab(string type, string id, std::vector<string> name_vector, std::vector<string> type_vector)
 {
-    if (id == "main" && type == "VOID" && type_vector.empty()){
+    if (id == "main" && type == "VOID" && type_vector.empty())
+    {
         main_exist = true;
     }
-    symTableBlockEntry curr_entry((int)0, true, id, type, true, name_vector, type_vector);
-    symbol_table_block_stack.back().entries.push_back(curr_entry);
-    curr_entry.is_func = true;
+    symTableBlockEntry entry((int)0, true, id, type, true, name_vector, type_vector);
+    symbol_table_block_stack.back().entries.push_back(entry);
+    entry.is_func = true;
 }
 
-void InsertParamsToSymTab(std::vector<string> name_vector, std::vector<string> type_vector, int lineno)
+void InsertParamsToSymTab(std::vector<string> names_vec, std::vector<string> types_vec, int lineno)
 {
     int counter = 0;
     std::unordered_set<string> func_params;
-    for (int i = name_vector.size() - 1; i >= 0; i--){
-        if (func_params.find(name_vector[i]) != func_params.end()){
-            output::errorDef(lineno, name_vector[i]);
+    for (int i = names_vec.size() - 1; i >= 0; i--)
+    {
+        if (func_params.find(names_vec[i]) != func_params.end())
+        {
+            output::errorDef(lineno, names_vec[i]);
             exit(1);
         }
         counter--;
-        func_params.insert(name_vector[i]);
-        symTableBlockEntry var_entry(counter, false, name_vector[i], type_vector[i], false);
-        symbol_table_block_stack.back().entries.push_back(var_entry);
+        func_params.insert(names_vec[i]);
+        symTableBlockEntry entry(counter, false, names_vec[i], types_vec[i], false);
+        symbol_table_block_stack.back().entries.push_back(entry);
     }
 }
 
 void CheckPrevDeclID(std::shared_ptr<TypeVar> var, int lineno)
 {
-    for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
-        for (auto entry : block->entries){
+    for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); ++blk)
+    {
+        for (auto entry : blk->entries)
+        {
             if (entry.id == var->id){
                 output::errorDef(lineno, var->id);
                 exit(1);
@@ -112,22 +124,23 @@ void CheckPrevDeclID(std::shared_ptr<TypeVar> var, int lineno)
 
 void CheckVoidScope(int lineno)
 {
-    if (symbol_table_block_stack.back().ret_type == "VOID"){
-        return;
+    if (symbol_table_block_stack.back().ret_type != "VOID")
+    {
+        output::errorMismatch(lineno);
+        exit(1);
     }
-    output::errorMismatch(lineno);
-     exit(1);
 }
 
 void CheckWhileScope(int lineno, bool is_break)
 {
-    if (!while_scope){
-        if (!is_break){
-            output::errorUnexpectedContinue(lineno);
+    if (!while_scope)
+    {
+        if (is_break){
+            output::errorUnexpectedBreak(lineno);
             exit(1);
         }
         else{
-            output::errorUnexpectedBreak(lineno);
+            output::errorUnexpectedContinue(lineno);
             exit(1);
         }
     }
@@ -137,48 +150,58 @@ void ValidateRetType(std::shared_ptr<TypeVar> var, int lineno)
 {
 
     string type = var->type;
-    if (!var->id.empty()){
+    if (!var->id.empty())
+    {
         bool found = false;
-        symTableBlockEntry found_entry;
-        for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
-            for (auto entry : block->entries){
-                if (entry.id == var->id){
+        symTableBlockEntry entry_found;
+        for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
+        {
+            for (auto entry : blk->entries)
+            {
+                if (entry.id == var->id)
+                {
                     found = true;
-                    found_entry = entry;
+                    entry_found = entry;
                     break;
                 }
             }
-            if (found){
-                type = found_entry.type;
+            if (found)
+            {
+                type = entry_found.type;
                 break;
             }
         }
     }
     
-    if (symbol_table_block_stack.back().ret_type != type && !(symbol_table_block_stack.back().ret_type == "INT" && var->type == "BYTE")){
+    if (symbol_table_block_stack.back().ret_type != type &&
+            !(symbol_table_block_stack.back().ret_type == "INT" && var->type == "BYTE"))
+    {
         output::errorMismatch(lineno);
         exit(1);
     }
 }
 
-void check_valid_auto_assign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno){
-	if (type->type == "VOID" || type->type == "STRING") {
+void check_valid_auto_assign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno)
+{
+	if (type->type == "VOID" || type->type == "STRING")
+    {
 		output::errorMismatch(lineno);
 		exit(1);
 	}
-	
-
 }
 
 void ValidateAssign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno)
 {
     bool found = false;
-    symTableBlockEntry found_entry;
-    for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
-        for (auto entry : block->entries){
-            if (entry.id == var->id){
+    symTableBlockEntry entry_found;
+    for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
+    {
+        for (auto entry : blk->entries)
+        {
+            if (entry.id == var->id)
+            {
                 found = true;
-                found_entry = entry;
+                entry_found = entry;
                 break;
             }
         }
@@ -187,13 +210,13 @@ void ValidateAssign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type,
         }
     }
 
-    if (!found || found_entry.is_func){
+    if (!found || entry_found.is_func)
+    {
         output::errorUndef(lineno, var->id);
         exit(1);
     }
-
-
-    if (found_entry.type != type->type && !(found_entry.type == "INT" && type->type == "BYTE")){
+    if (entry_found.type != type->type && !(entry_found.type == "INT" && type->type == "BYTE"))
+    {
         output::errorMismatch(lineno);
         exit(1);
     }
@@ -202,62 +225,70 @@ void ValidateAssign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type,
 
 void CallFunc(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list_var, std::shared_ptr<TypeVar> call_var, int lineno)
 {
-    symTableBlockEntry found_entry;
+    symTableBlockEntry entry_found;
     auto main_block = symbol_table_block_stack.front();
     bool found = false;
-    for (auto entry : main_block.entries){
-        if (entry.is_func && entry.id == id_var->id){
+    for (auto entry : main_block.entries)
+    {
+        if (entry.is_func && entry.id == id_var->id)
+        {
             found = true;
-            found_entry = entry;
+            entry_found = entry;
             break;
         }
     }
-
-    if (!found){
+    if (!found)
+    {
         output::errorUndefFunc(lineno, id_var->id);
         exit(1);
     }
 
-    call_var->type = found_entry.type;
+    call_var->type = entry_found.type;
 
-
-    for (int i = 0; i < exp_list_var->name_list.size(); i++){
+    for (int i = 0; i < exp_list_var->name_list.size(); i++)
+    {
         if (exp_list_var->type_list[i] != "none"){
             continue;
         }
         bool found = false;
-        symTableBlockEntry found_entry;
-        for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
-            for (auto entry : block->entries){
+        symTableBlockEntry entry_found;
+        for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
+        {
+            for (auto entry : blk->entries)
+            {
                 if (entry.id == exp_list_var->name_list[i]){
                     found = true;
-                    found_entry = entry;
+                    entry_found = entry;
                     break;
                 }
             }
             if (found){
-                exp_list_var->type_list[i] = found_entry.type;
+                exp_list_var->type_list[i] = entry_found.type;
                 break;
             }
         }
 
-        if (!found || found_entry.is_func){
+        if (!found || entry_found.is_func)
+        {
             output::errorUndef(lineno, exp_list_var->name_list[i]);
             exit(1);
         }
     }
 
-    if (exp_list_var->type_list.size() != found_entry.type_list.size()){
+    if (exp_list_var->type_list.size() != entry_found.type_list.size())
+    {
 
-        vector<string> reverse = make_reversed_vector(found_entry.type_list);
+        vector<string> reverse = ReverseVec(entry_found.type_list);
         output::errorPrototypeMismatch(lineno,id_var->id,reverse);
         exit(1);
     }
-    for (int i = 0; i < found_entry.type_list.size(); i++){
+    for (int i = 0; i < entry_found.type_list.size(); i++)
+    {
         string call_type = exp_list_var->type_list[i];
-        string sym_tab_type = found_entry.type_list[i];
-        if (!(sym_tab_type == call_type || (sym_tab_type == "INT" && call_type == "BYTE"))){
-            vector<string> reverse = make_reversed_vector(found_entry.type_list);
+        string sym_tab_type = entry_found.type_list[i];
+        if (!(sym_tab_type == call_type || (sym_tab_type == "INT" && call_type == "BYTE")))
+        {
+            vector<string> reverse = ReverseVec(entry_found.type_list);
             output::errorPrototypeMismatch(lineno, id_var->id, reverse);
             exit(1);
         }
@@ -295,17 +326,20 @@ void WhileState(bool curr_while_state)
 void VarExistsInScope(std::shared_ptr<TypeVar> var, int lineno)
 {
     bool found = false;
-    symTableBlockEntry found_entry;
-    for (auto block = symbol_table_block_stack.rbegin(); block != symbol_table_block_stack.rend(); ++block){
-        for (auto entry : block->entries){
-            if (entry.id == var->id && !entry.is_func){
+    symTableBlockEntry entry_found;
+    for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
+    {
+        for (auto entry : blk->entries)
+        {
+            if (entry.id == var->id && !entry.is_func)
+            {
                 found = true;
-                found_entry = entry;
+                entry_found = entry;
                 break;
             }
         }
         if (found){
-            var->type = found_entry.type;
+            var->type = entry_found.type;
             return;
         }
     }
