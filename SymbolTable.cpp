@@ -118,7 +118,7 @@ void CloseBlock()
 {
     offset_stack.pop();
     output::endScope();
-    for (auto entry : symbol_table_block_stack.back().entries)
+    for (auto entry : symbol_table_block_stack.back().sym_tab)
     {
         string type = ExpTypeToString(entry.type);
         if (entry.is_func)
@@ -141,7 +141,7 @@ void InsertToSymTable(std::shared_ptr<TypeVar> type, std::shared_ptr<TypeVar> id
     }
 
     symTableBlockEntry entry((offset_stack.top())++, false, id->id, type->type,is_func);
-    symbol_table_block_stack.back().entries.push_back(entry);
+    symbol_table_block_stack.back().sym_tab.push_back(entry);
 }
 
 void InsertFuncSymTab(ExpType type, string id, std::vector<string> names_vec, std::vector<ExpType> types_vec)
@@ -151,7 +151,7 @@ void InsertFuncSymTab(ExpType type, string id, std::vector<string> names_vec, st
         main_exist = true;
     }
     symTableBlockEntry entry((int)0, true, id, type, true, names_vec, types_vec);
-    symbol_table_block_stack.back().entries.push_back(entry);
+    symbol_table_block_stack.back().sym_tab.push_back(entry);
     entry.is_func = true;
 }
 
@@ -169,7 +169,7 @@ void InsertParamsToSymTab(std::vector<string> names_vec, std::vector<ExpType> ty
         counter--;
         func_params.insert(names_vec[i]);
         symTableBlockEntry entry(counter, false, names_vec[i], types_vec[i], false);
-        symbol_table_block_stack.back().entries.push_back(entry);
+        symbol_table_block_stack.back().sym_tab.push_back(entry);
     }
 }
 
@@ -177,7 +177,7 @@ void CheckPrevDeclID(std::shared_ptr<TypeVar> var, int lineno)
 {
     for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
     {
-        for (auto entry : blk->entries)
+        for (auto entry : blk->sym_tab)
         {
             if (entry.id == var->id)
             {
@@ -222,7 +222,7 @@ void ValidateRetType(std::shared_ptr<TypeVar> var, int lineno)
         symTableBlockEntry entry_found;
         for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
         {
-            for (auto entry : blk->entries)
+            for (auto entry : blk->sym_tab)
             {
                 if (entry.id == var->id)
                 {
@@ -262,7 +262,7 @@ void ValidateAssign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type,
     symTableBlockEntry entry_found;
     for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
     {
-        for (auto entry : blk->entries)
+        for (auto entry : blk->sym_tab)
         {
             if (entry.id == var->id)
             {
@@ -294,7 +294,7 @@ void CallFunc(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list
     symTableBlockEntry entry_found;
     auto main_block = symbol_table_block_stack.front();
     bool found = false;
-    for (auto entry : main_block.entries)
+    for (auto entry : main_block.sym_tab)
     {
         if (entry.is_func && entry.id == id_var->id)
         {
@@ -321,7 +321,7 @@ void CallFunc(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list
         symTableBlockEntry entry_found;
         for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
         {
-            for (auto entry : blk->entries)
+            for (auto entry : blk->sym_tab)
             {
                 if (entry.id == exp_list_var->name_list[i]){
                     found = true;
@@ -362,14 +362,14 @@ void CallFunc(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list
     }
 }
 
-void main_scope_initialization()
+void InitializeMainScope()
 {
     OpenNewBlock(false, NONE);
     InsertFuncSymTab(VOID_EXP, "print", {"input"}, {STRING_EXP});
     InsertFuncSymTab(VOID_EXP, "printi", {"input"}, {INT_EXP});
 }
 
-void close_main_scope()
+void CloseMainScope()
 {
     if (main_exist){
         CloseBlock();
@@ -396,7 +396,7 @@ void VarExistsInScope(std::shared_ptr<TypeVar> var, int lineno)
     symTableBlockEntry entry_found;
     for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
     {
-        for (auto entry : blk->entries)
+        for (auto entry : blk->sym_tab)
         {
             if (entry.id == var->id && !entry.is_func)
             {

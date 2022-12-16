@@ -167,9 +167,9 @@ Exp:    LPAREN Exp RPAREN           {$$ = $2;}
 void yyerror(const char*){errorSyn(yylineno); exit(1);}
 
 int main() {
-    main_scope_initialization();
+    InitializeMainScope();
     yyparse();
-    close_main_scope();
+    CloseMainScope();
     return 0;
 }
 

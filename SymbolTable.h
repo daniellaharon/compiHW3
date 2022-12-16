@@ -26,7 +26,7 @@ public:
 };
 
 typedef struct{
-    vector<symTableBlockEntry> entries;
+    vector<symTableBlockEntry> sym_tab;
     bool is_while;
     string ret_type;
 } symbol_table_block;
@@ -50,7 +50,7 @@ void CheckWhileScope(int lineno, bool is_break);
 void ValidateRetType(std::shared_ptr<TypeVar> var, int lineno);
 void InsertFuncSymTab(ExpType type, string id, std::vector<string> names_vec, std::vector<ExpType> types_vec);
 
-void main_scope_initialization();
-void close_main_scope();
+void InitializeMainScope();
+void CloseMainScope();
 
 #endif
