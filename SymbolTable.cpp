@@ -22,7 +22,7 @@ static string ExpTypeToString(ExpType type)
         case VOID_EXP:
             return "VOID";
         default:
-            return "None";
+            return "";
     }
 }
 
@@ -94,13 +94,13 @@ void OpenNewBlock(bool is_while_block, ExpType ret_type)
         curr_block.is_while = false;
     }
     string ret_str = ExpTypeToString(ret_type);
-    if (!ret_str.empty() )
+    if (!ret_str.empty())
     {
         curr_block.ret_type = !ret_str.empty() ? ret_str : symbol_table_block_stack.back().ret_type;
     } else if (!symbol_table_block_stack.empty() && !symbol_table_block_stack.back().ret_type.empty()){
         curr_block.ret_type = !ret_str.empty() ? ret_str : symbol_table_block_stack.back().ret_type;
     } else {
-        curr_block.ret_type = NONE;
+        curr_block.ret_type = "";
     }
 
     symbol_table_block_stack.push_back(curr_block);
@@ -188,6 +188,35 @@ void CheckPrevDeclID(std::shared_ptr<TypeVar> var, int lineno)
     }
 }
 
+void CheckPrevDeclID2(std::vector<string> names_vec, int lineno)
+{
+    for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
+    {
+        for (auto entry : blk->sym_tab)
+        {
+            for(int i=0; i<names_vec.size(); i++)
+            {
+                if(entry.id == names_vec[i]) {
+                    output::errorDef(lineno, names_vec[i]);
+                    exit(1);
+                }
+            }
+        }
+    }
+}
+
+void CheckFuncNameAndFormals(string id, std::vector<string> names_vec, int lineno)
+{
+    for (int i = 0; i < names_vec.size(); i++)
+    {
+        if(id == names_vec[i])
+        {
+            output::errorDef(lineno, id);
+            exit(1);
+        }
+    }
+}
+
 void CheckVoidScope(int lineno)
 {
     if (symbol_table_block_stack.back().ret_type != "VOID")
@@ -238,7 +267,11 @@ void ValidateRetType(std::shared_ptr<TypeVar> var, int lineno)
             }
         }
     }
-
+    if(symbol_table_block_stack.back().ret_type == "VOID")
+    {
+        output::errorMismatch(lineno);
+        exit(1);
+    }
     if (symbol_table_block_stack.back().ret_type != type &&
         !(symbol_table_block_stack.back().ret_type == "INT" && ExpTypeToString(var->type) == "BYTE"))
     {

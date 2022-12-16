@@ -38,6 +38,8 @@ void InsertParamsToSymTab(std::vector<string> names_vec, std::vector<ExpType> ty
 void VarExistsInScope(std::shared_ptr<TypeVar> var, int lineno);
 void InsertToSymTable(std::shared_ptr<TypeVar> type, std::shared_ptr<TypeVar> id, bool is_func, int lineno);
 void CheckPrevDeclID(std::shared_ptr<TypeVar> var, int lineno);
+void CheckPrevDeclID2(std::vector<string> names_vec, int lineno);
+void CheckFuncNameAndFormals(string id, std::vector<string> names_vec, int lineno);
 void ValidateAssign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno);
 void check_valid_auto_assign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno);
 void OpenNewBlock(bool is_while_block, ExpType ret_type);
@@ -52,5 +54,6 @@ void InsertFuncSymTab(ExpType type, string id, std::vector<string> names_vec, st
 
 void InitializeMainScope();
 void CloseMainScope();
+
 
 #endif

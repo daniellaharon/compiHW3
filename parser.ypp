@@ -9,9 +9,10 @@
     extern int yylex();
 %}
 
-%token VOID INT BYTE B BOOL TRUE FALSE RETURN IF WHILE BREAK CONTINUE SC
+%token VOID INT BYTE B BOOL TRUE FALSE RETURN WHILE BREAK CONTINUE SC
 COMMA ID NUM STRING
 
+%left IF
 %right ASSIGN
 %left OR
 %left AND
@@ -33,12 +34,14 @@ Funcs:       /* epsilon */       {}
 ;
 
 FuncDecl:    RetType ID LPAREN Formals RPAREN
-             {CheckPrevDeclID($2, yylineno);
-             InsertFuncSymTab($1->type, $2->id, $4->name_list, $4->type_list);
-             OpenNewBlock(false, $1->type);
-             InsertParamsToSymTab($4->name_list, $4->type_list, yylineno);}
+                                                 {CheckFuncNameAndFormals($2->id, $4->name_list, yylineno);
+                                                 CheckPrevDeclID($2, yylineno);
+                                                 CheckPrevDeclID2($4->name_list, yylineno);
+                                                 InsertFuncSymTab($1->type, $2->id, $4->name_list, $4->type_list);
+                                                 OpenNewBlock(false, $1->type);
+                                                 InsertParamsToSymTab($4->name_list, $4->type_list, yylineno);}
              LBRACE Statements RBRACE
-             {CloseBlock();}
+                                                 {CloseBlock();}
 ;
 
 RetType:     Type                {$$ = $1;}
@@ -121,6 +124,10 @@ Type:   INT                         {$$ = std::make_shared<TypeVar>();
 ;
 
 Exp:    LPAREN Exp RPAREN           {$$ = $2;}
+        | Exp IF LPAREN Exp RPAREN ELSE Exp         {$$ = std::make_shared<TypeVar>();
+                                                      IsBool($4, yylineno);
+                                                      IsDiffAndBadAssign($1, $7, yylineno);
+                                                      $$->type = GetType2($1, $7);}
         | Exp BINOP Exp             {$$ = std::make_shared<TypeVar>();
                                     IsNum($1, yylineno);
                                     IsNum($3, yylineno);
