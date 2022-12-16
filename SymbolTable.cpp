@@ -7,6 +7,50 @@ std::stack<int> offset_stack;
 bool main_exist = false;
 int while_scope = 0;
 
+static string ExpTypeToString(ExpType type)
+{
+    switch (type)
+    {
+        case INT_EXP:
+            return "INT";
+        case BYTE_EXP:
+            return "BYTE";
+        case BOOL_EXP:
+            return "BOOL";
+        case STRING_EXP:
+            return "STRING";
+        case VOID_EXP:
+            return "VOID";
+        default:
+            return "None";
+    }
+}
+
+static ExpType StringToExpType(string type)
+{
+    if(type == "INT")
+    {
+        return INT_EXP;
+    }
+    if(type == "BYTE")
+    {
+        return BYTE_EXP;
+    }
+    if(type == "BOOL")
+    {
+        return BOOL_EXP;
+    }
+    if(type == "STRING")
+    {
+        return STRING_EXP;
+    }
+    if(type == "VOID")
+    {
+        return VOID_EXP;
+    }
+    return NONE;
+}
+
 static vector<string> ReverseVec(vector<string> vec)
 {
     vector<string> reverse_vec;
@@ -16,11 +60,31 @@ static vector<string> ReverseVec(vector<string> vec)
     }
     return reverse_vec;
 }
+static vector<string> ReverseVecTypes(vector<ExpType> vec)
+{
+    vector<string> reverse_vec;
+    for (int i = vec.size() - 1; i >= 0; i--)
+    {
+        string x = ExpTypeToString(vec[i]);
+        reverse_vec.push_back(x);
+    }
+    return reverse_vec;
+}
 
-void OpenNewBlock(bool is_while_block, string ret_type)
+static std::vector<ExpType> StringToExpTypeVec(std::vector<string> types_vec)
+{
+    std::vector<ExpType> res;
+    for (auto & i : types_vec)
+    {
+        res.push_back(StringToExpType(i));
+    }
+    return res;
+}
+
+void OpenNewBlock(bool is_while_block, ExpType ret_type)
 {
     symbol_table_block curr_block;
-    if (is_while_block )
+    if (is_while_block)
     {
         curr_block.is_while = true;
     } else if (!symbol_table_block_stack.empty() && symbol_table_block_stack.back().is_while)
@@ -29,14 +93,14 @@ void OpenNewBlock(bool is_while_block, string ret_type)
     } else {
         curr_block.is_while = false;
     }
-
-    if (!ret_type.empty() )
+    string ret_str = ExpTypeToString(ret_type);
+    if (!ret_str.empty() )
     {
-        curr_block.ret_type = !ret_type.empty() ? ret_type : symbol_table_block_stack.back().ret_type;
+        curr_block.ret_type = !ret_str.empty() ? ret_str : symbol_table_block_stack.back().ret_type;
     } else if (!symbol_table_block_stack.empty() && !symbol_table_block_stack.back().ret_type.empty()){
-        curr_block.ret_type = !ret_type.empty() ? ret_type : symbol_table_block_stack.back().ret_type;
+        curr_block.ret_type = !ret_str.empty() ? ret_str : symbol_table_block_stack.back().ret_type;
     } else {
-        curr_block.ret_type = "";
+        curr_block.ret_type = NONE;
     }
 
     symbol_table_block_stack.push_back(curr_block);
@@ -56,11 +120,11 @@ void CloseBlock()
     output::endScope();
     for (auto entry : symbol_table_block_stack.back().entries)
     {
-        string type = entry.type;
+        string type = ExpTypeToString(entry.type);
         if (entry.is_func)
         {
-            vector<string> reversed_vec = ReverseVec(entry.type_list);
-            type = output::makeFunctionType(entry.type, reversed_vec);
+            vector<string> reversed_vec = ReverseVecTypes(entry.type_list);
+            type = output::makeFunctionType(type, reversed_vec);
         }
         int offset_to_print = entry.is_offset_null ? 0 : entry.offset;
         output::printID(entry.id, offset_to_print, type);
@@ -70,27 +134,28 @@ void CloseBlock()
 
 void InsertToSymTable(std::shared_ptr<TypeVar> type, std::shared_ptr<TypeVar> id, bool is_func ,int lineno)
 {
-	if (type->type == "VOID" ) {
-		output::errorMismatch(lineno);
-		exit(1);
-	}
+    if (type->type == VOID_EXP)
+    {
+        output::errorMismatch(lineno);
+        exit(1);
+    }
 
     symTableBlockEntry entry((offset_stack.top())++, false, id->id, type->type,is_func);
     symbol_table_block_stack.back().entries.push_back(entry);
 }
 
-void InsertFuncSymTab(string type, string id, std::vector<string> name_vector, std::vector<string> type_vector)
+void InsertFuncSymTab(ExpType type, string id, std::vector<string> names_vec, std::vector<ExpType> types_vec)
 {
-    if (id == "main" && type == "VOID" && type_vector.empty())
+    if (id == "main" && type == VOID_EXP && types_vec.empty())
     {
         main_exist = true;
     }
-    symTableBlockEntry entry((int)0, true, id, type, true, name_vector, type_vector);
+    symTableBlockEntry entry((int)0, true, id, type, true, names_vec, types_vec);
     symbol_table_block_stack.back().entries.push_back(entry);
     entry.is_func = true;
 }
 
-void InsertParamsToSymTab(std::vector<string> names_vec, std::vector<string> types_vec, int lineno)
+void InsertParamsToSymTab(std::vector<string> names_vec, std::vector<ExpType> types_vec, int lineno)
 {
     int counter = 0;
     std::unordered_set<string> func_params;
@@ -110,11 +175,12 @@ void InsertParamsToSymTab(std::vector<string> names_vec, std::vector<string> typ
 
 void CheckPrevDeclID(std::shared_ptr<TypeVar> var, int lineno)
 {
-    for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); ++blk)
+    for (auto blk = symbol_table_block_stack.rbegin(); blk != symbol_table_block_stack.rend(); blk++)
     {
         for (auto entry : blk->entries)
         {
-            if (entry.id == var->id){
+            if (entry.id == var->id)
+            {
                 output::errorDef(lineno, var->id);
                 exit(1);
             }
@@ -149,7 +215,7 @@ void CheckWhileScope(int lineno, bool is_break)
 void ValidateRetType(std::shared_ptr<TypeVar> var, int lineno)
 {
 
-    string type = var->type;
+    string type = ExpTypeToString(var->type);
     if (!var->id.empty())
     {
         bool found = false;
@@ -167,14 +233,14 @@ void ValidateRetType(std::shared_ptr<TypeVar> var, int lineno)
             }
             if (found)
             {
-                type = entry_found.type;
+                type = ExpTypeToString(entry_found.type);
                 break;
             }
         }
     }
-    
+
     if (symbol_table_block_stack.back().ret_type != type &&
-            !(symbol_table_block_stack.back().ret_type == "INT" && var->type == "BYTE"))
+        !(symbol_table_block_stack.back().ret_type == "INT" && ExpTypeToString(var->type) == "BYTE"))
     {
         output::errorMismatch(lineno);
         exit(1);
@@ -183,11 +249,11 @@ void ValidateRetType(std::shared_ptr<TypeVar> var, int lineno)
 
 void check_valid_auto_assign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno)
 {
-	if (type->type == "VOID" || type->type == "STRING")
+    if (type->type == VOID_EXP || type->type == STRING_EXP)
     {
-		output::errorMismatch(lineno);
-		exit(1);
-	}
+        output::errorMismatch(lineno);
+        exit(1);
+    }
 }
 
 void ValidateAssign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type, int lineno)
@@ -215,7 +281,7 @@ void ValidateAssign(std::shared_ptr<TypeVar> var, std::shared_ptr<TypeVar> type,
         output::errorUndef(lineno, var->id);
         exit(1);
     }
-    if (entry_found.type != type->type && !(entry_found.type == "INT" && type->type == "BYTE"))
+    if (entry_found.type != type->type && !(entry_found.type == INT_EXP && type->type == BYTE_EXP))
     {
         output::errorMismatch(lineno);
         exit(1);
@@ -247,7 +313,8 @@ void CallFunc(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list
 
     for (int i = 0; i < exp_list_var->name_list.size(); i++)
     {
-        if (exp_list_var->type_list[i] != "none"){
+        if (exp_list_var->type_list[i] != NONE)
+        {
             continue;
         }
         bool found = false;
@@ -278,17 +345,17 @@ void CallFunc(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list
     if (exp_list_var->type_list.size() != entry_found.type_list.size())
     {
 
-        vector<string> reverse = ReverseVec(entry_found.type_list);
+        vector<string> reverse = ReverseVecTypes(entry_found.type_list);
         output::errorPrototypeMismatch(lineno,id_var->id,reverse);
         exit(1);
     }
     for (int i = 0; i < entry_found.type_list.size(); i++)
     {
-        string call_type = exp_list_var->type_list[i];
-        string sym_tab_type = entry_found.type_list[i];
+        string call_type = ExpTypeToString(exp_list_var->type_list[i]);
+        string sym_tab_type =  ExpTypeToString(entry_found.type_list[i]);
         if (!(sym_tab_type == call_type || (sym_tab_type == "INT" && call_type == "BYTE")))
         {
-            vector<string> reverse = ReverseVec(entry_found.type_list);
+            vector<string> reverse = ReverseVecTypes(entry_found.type_list);
             output::errorPrototypeMismatch(lineno, id_var->id, reverse);
             exit(1);
         }
@@ -297,9 +364,9 @@ void CallFunc(std::shared_ptr<TypeVar> id_var, std::shared_ptr<TypeVar> exp_list
 
 void main_scope_initialization()
 {
-    OpenNewBlock(false, "");
-    InsertFuncSymTab("VOID", "print", {"input"}, {"STRING"});
-    InsertFuncSymTab("VOID", "printi", {"input"}, {"INT"});
+    OpenNewBlock(false, NONE);
+    InsertFuncSymTab(VOID_EXP, "print", {"input"}, {STRING_EXP});
+    InsertFuncSymTab(VOID_EXP, "printi", {"input"}, {INT_EXP});
 }
 
 void close_main_scope()
@@ -308,7 +375,7 @@ void close_main_scope()
         CloseBlock();
         return;
     }
-    
+
     output::errorMainMissing();
     exit(1);
 }

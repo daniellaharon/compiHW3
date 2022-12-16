@@ -42,7 +42,7 @@ FuncDecl:    RetType ID LPAREN Formals RPAREN
 ;
 
 RetType:     Type                {$$ = $1;}
-             |  VOID             {$$ = std::make_shared<TypeVar>(); $$->type = "VOID";}
+             |  VOID             {$$ = std::make_shared<TypeVar>(); $$->type = VOID_EXP;}
 ;
 
 Formals:     /* epsilon */       {$$ = std::make_shared<TypeVar>();}
@@ -51,10 +51,10 @@ Formals:     /* epsilon */       {$$ = std::make_shared<TypeVar>();}
 
 FormalsList:     FormalDecl          {$$ = std::make_shared<TypeVar>();
                                       $$->name_list = PushBackVar($$->name_list, $1->id);
-                                      $$->type_list = PushBackVar($$->type_list, $1->type);}
+                                      $$->type_list = PushBackVarType($$->type_list, $1->type);}
                  | FormalDecl COMMA FormalsList  {$$ = $3;
                                                   $$->name_list = PushBackVar($3->name_list, $1->id);
-                                                  $$->type_list = PushBackVar($3->type_list, $1->type);}
+                                                  $$->type_list = PushBackVarType($3->type_list, $1->type);}
 ;
 
 FormalDecl:      Type ID          {$$ = $2; $$->type = $1->type;}
@@ -81,7 +81,7 @@ Statement:  LBRACE OPENBLOCK Statements RBRACE    {CloseBlock();}
             | CONTINUE SC       {CheckWhileScope(yylineno, false);}
 ;
 
-OPENBLOCK:      /* epsilon */                {OpenNewBlock(false, "");}
+OPENBLOCK:      /* epsilon */                {OpenNewBlock(false, NONE);}
 ;
 
 CLOSEBLOCK:     /* epsilon */               {CloseBlock();}
@@ -106,18 +106,18 @@ Call:   ID LPAREN ExpList RPAREN    {$$ = $3;
 
 ExpList: Exp                         {$$ = std::make_shared<TypeVar>();
                                       $$->name_list = PushBackVar($$->name_list, $1->id);
-                                      $$->type_list = PushBackVar($$->type_list, $1->type);}
+                                      $$->type_list = PushBackVarType($$->type_list, $1->type);}
          | Exp COMMA ExpList         {$$ = $3;
                                               $$->name_list = PushBackVar($3->name_list, $1->id);
-                                                 $$->type_list = PushBackVar($3->type_list, $1->type);}
+                                                 $$->type_list = PushBackVarType($3->type_list, $1->type);}
 ;
 
 Type:   INT                         {$$ = std::make_shared<TypeVar>();
-                                     $$->type = "INT";}
+                                     $$->type = INT_EXP;}
         | BYTE                      {$$ = std::make_shared<TypeVar>();
-                                     $$->type = "BYTE";}
+                                     $$->type = BYTE_EXP;}
         | BOOL                      {$$ = std::make_shared<TypeVar>();
-                                                 $$->type = "BOOL";}
+                                                 $$->type = BOOL_EXP;}
 ;
 
 Exp:    LPAREN Exp RPAREN           {$$ = $2;}
@@ -132,15 +132,15 @@ Exp:    LPAREN Exp RPAREN           {$$ = $2;}
         | ID                        {$$ = $1;
                                      VarExistsInScope($$, yylineno);}
         | Call                      {$$ = $1;}
-        | NUM                       {$$ = $1; $$->type = "INT";}
+        | NUM                       {$$ = $1; $$->type = INT_EXP;}
         | NUM B                     {$$ = $1; ByteErr($$, yylineno);
-                                     $$->type = "BYTE";}
+                                     $$->type = BYTE_EXP;}
         | STRING                    {$$ = std::make_shared<TypeVar>();
-                                     $$->type = "STRING";}
+                                     $$->type = STRING_EXP;}
         | TRUE                      {$$ = std::make_shared<TypeVar>();
-                                     $$->type = "BOOL";}
+                                     $$->type = BOOL_EXP;}
         | FALSE                     {$$ = std::make_shared<TypeVar>();
-                                     $$->type = "BOOL";}
+                                     $$->type = BOOL_EXP;}
         | NOT Exp                   {$$ = $2;
                                     IsBool($$, yylineno);}
         | Exp AND Exp               {IsBool($1, yylineno);
@@ -152,11 +152,11 @@ Exp:    LPAREN Exp RPAREN           {$$ = $2;}
         | Exp RELOP Exp             {IsNum($1, yylineno);
                                      IsNum($3, yylineno);
                                      $$ = std::make_shared<TypeVar>();
-                                     $$->type = "BOOL";}
+                                     $$->type = BOOL_EXP;}
         | Exp EQOP Exp              {IsNum($1, yylineno);
                                      IsNum($3, yylineno);
                                      $$ = std::make_shared<TypeVar>();
-                                     $$->type = "BOOL";}
+                                     $$->type = BOOL_EXP;}
         | LPAREN Type RPAREN Exp    {IsNum($2, yylineno);
                                      IsNum($4, yylineno);
                                      $$ = $4; $$->type = $2->type;}
