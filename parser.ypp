@@ -14,6 +14,7 @@ COMMA ID NUM STRING
 
 %left IF
 %right ASSIGN
+%right TRI_OP_PREC
 %left OR
 %left AND
 %left EQOP
@@ -124,10 +125,10 @@ Type:   INT                         {$$ = std::make_shared<TypeVar>();
 ;
 
 Exp:    LPAREN Exp RPAREN           {$$ = $2;}
-        | Exp IF LPAREN Exp RPAREN ELSE Exp         {$$ = std::make_shared<TypeVar>();
-                                                      IsBool($4, yylineno);
-                                                      IsDiffAndBadAssign($1, $7, yylineno);
-                                                      $$->type = GetType2($1, $7);}
+        | Exp IF LPAREN Exp RPAREN ELSE Exp %prec TRI_OP_PREC     {$$ = std::make_shared<TypeVar>();
+                                                                  IsBool($4, yylineno);
+                                                                  IsDiffAndBadAssign($1, $7, yylineno);
+                                                                  $$->type = GetType2($1, $7);}
         | Exp BINOP Exp             {$$ = std::make_shared<TypeVar>();
                                     IsNum($1, yylineno);
                                     IsNum($3, yylineno);
