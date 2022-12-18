@@ -1,7 +1,7 @@
 #ifndef SYMTABLE
 #define SYMTABLE
 
-#include "TypeVar.h"
+#include "TypeVar.hpp"
 #include <stack>
 class symTableBlockEntry
 {

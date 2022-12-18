@@ -1,5 +1,5 @@
 #include <iostream>
-#include "TypeVar.h"
+#include "TypeVar.hpp"
 
 void IsNum(std::shared_ptr<TypeVar> var, int lineno)
 {

@@ -2,7 +2,7 @@
 #define TYPEVAR_H
 
 #include <string>
-#include "hw3_output.h"
+#include "hw3_output.hpp"
 using std::string;
 #include <memory>
 

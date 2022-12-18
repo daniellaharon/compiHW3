@@ -1,7 +1,7 @@
 %{
     #include <iostream>
-    #include "hw3_output.h"
-    #include "SymbolTable.h"
+    #include "hw3_output.hpp"
+    #include "SymbolTable.hpp"
     using namespace output;
     int main();
     void yyerror(const char*);
