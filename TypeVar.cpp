@@ -46,6 +46,11 @@ ExpType GetType2(std::shared_ptr<TypeVar> var1, std::shared_ptr<TypeVar> var2)
         return INT_EXP;
 
     }
+    if (var1->type == STRING_EXP || var2->type == STRING_EXP)
+    {
+        return STRING_EXP;
+
+    }
     else{
         return BYTE_EXP;
     }
@@ -97,10 +102,10 @@ void CheckAssign(std::shared_ptr<TypeVar> var1, std::shared_ptr<TypeVar> var2, i
 
 void IsDiffAndBadAssign(std::shared_ptr<TypeVar> var1, std::shared_ptr<TypeVar> var2, int lineno)
 {
-    if((var1->type != var2->type) && !(var1->type == BYTE_EXP && var2->type == INT_EXP))
+    if((var1->type != var2->type) && !(var1->type == BYTE_EXP && var2->type == INT_EXP||(var1->type == INT_EXP && var2->type == BYTE_EXP)))
     {
         output::errorMismatch(lineno);
-//        cout<< "HELLO   "<<ToString(var1->type) << ToString(var2->type) <<endl;
+//        cout<< "HELLO  ? "<<ToString(var1->type) << ToString(var2->type) <<endl;
         exit(1);
     }
 }
